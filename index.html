@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Egg Roulette Simulator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --yolk: #F5C842;
+    --raw: #F28C38;
+    --shell: #F5ECD7;
+    --dark: #1A1410;
+    --mid: #2E2419;
+    --safe: #5DBB8A;
+    --danger: #E05C4B;
+    --text: #F5ECD7;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+    background-image: radial-gradient(ellipse at 20% 20%, #2E1F0A 0%, transparent 60%),
+                      radial-gradient(ellipse at 80% 80%, #1A2410 0%, transparent 60%);
+  }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3rem, 8vw, 6rem);
+    letter-spacing: 4px;
+    color: var(--yolk);
+    text-shadow: 4px 4px 0 #8B6914;
+    margin-bottom: 0.2rem;
+  }
+
+  .subtitle {
+    font-size: 0.75rem;
+    letter-spacing: 3px;
+    color: #9A8060;
+    text-transform: uppercase;
+    margin-bottom: 2.5rem;
+  }
+
+  .controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .control-group label {
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: #9A8060;
+    text-transform: uppercase;
+  }
+
+  input[type="number"] {
+    background: var(--mid);
+    border: 1px solid #5A4030;
+    color: var(--yolk);
+    font-family: 'DM Mono', monospace;
+    font-size: 1rem;
+    padding: 0.5rem 0.75rem;
+    width: 100px;
+    border-radius: 4px;
+    outline: none;
+  }
+
+  input[type="number"]:focus { border-color: var(--yolk); }
+
+  .btn {
+    background: var(--yolk);
+    color: var(--dark);
+    border: none;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 2px;
+    padding: 0.6rem 2rem;
+    cursor: pointer;
+    border-radius: 4px;
+    align-self: flex-end;
+    transition: all 0.15s;
+    box-shadow: 3px 3px 0 #8B6914;
+  }
+
+  .btn:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 #8B6914; }
+  .btn:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #8B6914; }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--yolk);
+    border: 1px solid var(--yolk);
+    box-shadow: 3px 3px 0 #8B6914;
+  }
+
+  /* Players */
+  .arena {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 860px;
+    margin-bottom: 2rem;
+    align-items: start;
+  }
+
+  .player-card {
+    background: var(--mid);
+    border: 1px solid #3A2C1A;
+    border-radius: 8px;
+    padding: 1.5rem;
+    position: relative;
+    transition: all 0.3s;
+  }
+
+  .player-card.loser {
+    border-color: var(--danger);
+    box-shadow: 0 0 20px rgba(224,92,75,0.3);
+  }
+
+  .player-card.winner {
+    border-color: var(--safe);
+    box-shadow: 0 0 20px rgba(93,187,138,0.3);
+  }
+
+  .player-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+    margin-bottom: 0.5rem;
+  }
+
+  .raw-count {
+    font-size: 2.5rem;
+    font-weight: 500;
+    margin: 0.5rem 0;
+  }
+
+  .raw-label {
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: #9A8060;
+    text-transform: uppercase;
+  }
+
+  .egg-indicators {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .egg-dot {
+    width: 20px;
+    height: 24px;
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    background: #3A2C1A;
+    border: 1px solid #5A4030;
+    transition: all 0.3s;
+  }
+
+  .egg-dot.hit { background: var(--danger); border-color: var(--danger); box-shadow: 0 0 8px var(--danger); }
+
+  /* Carton */
+  .carton-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .carton-label {
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    color: #9A8060;
+    text-transform: uppercase;
+  }
+
+  .carton {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    background: #3A2C1A;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #5A4030;
+  }
+
+  .egg {
+    width: 36px;
+    height: 44px;
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    background: var(--shell);
+    border: 2px solid #D4C4A0;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+  }
+
+  .egg.available:hover {
+    transform: scale(1.1) translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+
+  .egg.used-safe {
+    background: #3A2C1A;
+    border-color: #5A4030;
+    cursor: default;
+  }
+
+  .egg.used-raw {
+    background: var(--raw);
+    border-color: #C06020;
+    cursor: default;
+    animation: splat 0.3s ease-out;
+  }
+
+  @keyframes splat {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+  }
+
+  .egg.active-turn {
+    box-shadow: 0 0 0 2px var(--yolk), 0 0 12px var(--yolk);
+  }
+
+  /* VS */
+  .vs {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    color: #5A4030;
+    align-self: center;
+    margin-top: 2rem;
+  }
+
+  /* Log */
+  .log-section {
+    width: 100%;
+    max-width: 860px;
+    margin-bottom: 2rem;
+  }
+
+  .log-header {
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    color: #9A8060;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .log {
+    background: var(--mid);
+    border: 1px solid #3A2C1A;
+    border-radius: 8px;
+    padding: 1rem;
+    height: 140px;
+    overflow-y: auto;
+    font-size: 0.8rem;
+    line-height: 1.8;
+  }
+
+  .log::-webkit-scrollbar { width: 4px; }
+  .log::-webkit-scrollbar-track { background: var(--dark); }
+  .log::-webkit-scrollbar-thumb { background: #5A4030; border-radius: 2px; }
+
+  .log-entry { color: #9A8060; }
+  .log-entry.raw { color: var(--danger); }
+  .log-entry.safe { color: var(--safe); }
+  .log-entry.win { color: var(--yolk); font-weight: 500; }
+
+  /* Stats */
+  .stats-section {
+    width: 100%;
+    max-width: 860px;
+  }
+
+  .stats-header {
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    color: #9A8060;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+  }
+
+  .stat-card {
+    background: var(--mid);
+    border: 1px solid #3A2C1A;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+  }
+
+  .stat-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.2rem;
+    color: var(--yolk);
+  }
+
+  .stat-label {
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: #9A8060;
+    text-transform: uppercase;
+  }
+
+  .turn-indicator {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 3px;
+    color: var(--yolk);
+    text-align: center;
+    margin-bottom: 0.5rem;
+    min-height: 1.4rem;
+  }
+
+  .game-over-banner {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 4px;
+    text-align: center;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    display: none;
+  }
+
+  .game-over-banner.show {
+    display: block;
+    animation: fadeIn 0.5s ease;
+  }
+
+  .game-over-banner.p1wins { color: var(--safe); border: 1px solid var(--safe); background: rgba(93,187,138,0.1); }
+  .game-over-banner.p2wins { color: var(--safe); border: 1px solid var(--safe); background: rgba(93,187,138,0.1); }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Auto sim progress */
+  .progress-bar-wrap {
+    width: 100%;
+    max-width: 860px;
+    margin-bottom: 1rem;
+    display: none;
+  }
+
+  .progress-bar-wrap.show { display: block; }
+
+  .progress-bar {
+    height: 4px;
+    background: #3A2C1A;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--yolk);
+    width: 0%;
+    transition: width 0.1s;
+  }
+
+  .mode-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 2rem;
+    border: 1px solid #3A2C1A;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .tab {
+    padding: 0.5rem 1.5rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    background: transparent;
+    color: #9A8060;
+    border: none;
+    transition: all 0.2s;
+  }
+
+  .tab.active {
+    background: var(--yolk);
+    color: var(--dark);
+  }
+
+  .mode-section { display: none; width: 100%; max-width: 860px; }
+  .mode-section.active { display: flex; flex-direction: column; align-items: center; width: 100%; }
+</style>
+</head>
+<body>
+
+<h1>EGG ROULETTE</h1>
+<p class="subtitle">Probability Simulator</p>
+
+<div class="mode-tabs">
+  <button class="tab active" onclick="switchMode('play')">🥚 Play Game</button>
+  <button class="tab" onclick="switchMode('sim')">📊 Run Simulation</button>
+</div>
+
+<!-- PLAY MODE -->
+<div class="mode-section active" id="mode-play">
+  <div class="turn-indicator" id="turnIndicator">Player 1's turn — pick an egg!</div>
+
+  <div class="game-over-banner" id="gameOverBanner"></div>
+
+  <div class="arena">
+    <div class="player-card" id="p1card">
+      <div class="player-name" style="color: var(--yolk);">Player 1</div>
+      <div class="raw-count" id="p1raw">0</div>
+      <div class="raw-label">raw eggs</div>
+      <div class="egg-indicators">
+        <div class="egg-dot" id="p1dot0"></div>
+        <div class="egg-dot" id="p1dot1"></div>
+      </div>
+    </div>
+
+    <div class="vs">VS</div>
+
+    <div class="player-card" id="p2card">
+      <div class="player-name" style="color: #F28C38;">Player 2</div>
+      <div class="raw-count" id="p2raw">0</div>
+      <div class="raw-label">raw eggs</div>
+      <div class="egg-indicators">
+        <div class="egg-dot" id="p2dot0"></div>
+        <div class="egg-dot" id="p2dot1"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="carton-section">
+    <div class="carton-label">The Carton — click to pick</div>
+    <div class="carton" id="carton"></div>
+  </div>
+
+  <div style="display:flex; gap:1rem; margin-top:1.5rem;">
+    <button class="btn" onclick="resetGame()">New Game</button>
+    <button class="btn btn-secondary" onclick="autoPlay()">Auto Play</button>
+  </div>
+
+  <div class="log-section" style="margin-top:1.5rem;">
+    <div class="log-header">Game Log</div>
+    <div class="log" id="gameLog"></div>
+  </div>
+</div>
+
+<!-- SIM MODE -->
+<div class="mode-section" id="mode-sim">
+  <div class="controls">
+    <div class="control-group">
+      <label>Simulations</label>
+      <input type="number" id="simCount" value="10000" min="100" max="100000" step="1000">
+    </div>
+    <button class="btn" onclick="runSimulation()">Run Sim</button>
+  </div>
+
+  <div class="progress-bar-wrap" id="progressWrap">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+
+  <div class="stats-section">
+    <div class="stats-header">Results</div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="statSims">—</div>
+        <div class="stat-label">Simulations Run</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statP1wins" style="color:var(--yolk)">—</div>
+        <div class="stat-label">Player 1 Wins</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statP2wins" style="color:var(--raw)">—</div>
+        <div class="stat-label">Player 2 Wins</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statP1pct">—</div>
+        <div class="stat-label">P1 Win Rate</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statP2pct">—</div>
+        <div class="stat-label">P2 Win Rate</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statAvgTurns">—</div>
+        <div class="stat-label">Avg Game Length</div>
+      </div>
+    </div>
+
+    <div style="margin-top:1.5rem;">
+      <div class="stats-header">Win Rate Chart</div>
+      <div style="background:var(--mid); border:1px solid #3A2C1A; border-radius:8px; padding:1rem; margin-top:0.5rem;">
+        <div style="display:flex; align-items:center; gap:1rem; margin-bottom:0.75rem;">
+          <span style="font-size:0.7rem; letter-spacing:2px; color:#9A8060; width:60px;">P1</span>
+          <div style="flex:1; background:#3A2C1A; border-radius:4px; height:28px; overflow:hidden;">
+            <div id="barP1" style="height:100%; background:var(--yolk); width:0%; transition:width 1s ease; display:flex; align-items:center; padding-left:8px; font-family:'Bebas Neue'; font-size:0.9rem; color:var(--dark);"></div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:1rem;">
+          <span style="font-size:0.7rem; letter-spacing:2px; color:#9A8060; width:60px;">P2</span>
+          <div style="flex:1; background:#3A2C1A; border-radius:4px; height:28px; overflow:hidden;">
+            <div id="barP2" style="height:100%; background:var(--raw); width:0%; transition:width 1s ease; display:flex; align-items:center; padding-left:8px; font-family:'Bebas Neue'; font-size:0.9rem; color:var(--dark);"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:1.5rem;">
+      <div class="stats-header">Game Length Distribution</div>
+      <div id="distChart" style="background:var(--mid); border:1px solid #3A2C1A; border-radius:8px; padding:1rem; margin-top:0.5rem; display:flex; align-items:flex-end; gap:4px; height:120px;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- GAME STATE ----
+let eggs = [];
+let currentPlayer = 0; // 0 = P1, 1 = P2
+let rawCounts = [0, 0];
+let gameOver = false;
+
+function initEggs() {
+  // 4 raw, 8 hard-boiled, shuffled
+  let arr = Array(8).fill('H').concat(Array(4).fill('R'));
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function resetGame() {
+  eggs = initEggs();
+  currentPlayer = 0;
+  rawCounts = [0, 0];
+  gameOver = false;
+
+  document.getElementById('p1raw').textContent = '0';
+  document.getElementById('p2raw').textContent = '0';
+  document.getElementById('gameOverBanner').className = 'game-over-banner';
+  document.getElementById('p1card').className = 'player-card';
+  document.getElementById('p2card').className = 'player-card';
+  document.getElementById('gameLog').innerHTML = '';
+  document.getElementById('turnIndicator').textContent = "Player 1's turn — pick an egg!";
+
+  for (let i = 0; i < 2; i++) {
+    document.getElementById(`p1dot${i}`).className = 'egg-dot';
+    document.getElementById(`p2dot${i}`).className = 'egg-dot';
+  }
+
+  renderCarton();
+}
+
+function renderCarton() {
+  const carton = document.getElementById('carton');
+  carton.innerHTML = '';
+  eggs.forEach((type, i) => {
+    const egg = document.createElement('div');
+    egg.className = 'egg';
+    if (type === null) {
+      egg.classList.add('used-safe');
+    } else {
+      egg.classList.add('available');
+      if (!gameOver) egg.onclick = () => pickEgg(i);
+    }
+    if (type === 'R_used') egg.classList.add('used-raw');
+    carton.appendChild(egg);
+  });
+}
+
+function pickEgg(index) {
+  if (gameOver) return;
+  const type = eggs[index];
+  if (type === null || type === 'R_used') return;
+
+  const isRaw = type === 'R';
+  const pName = currentPlayer === 0 ? 'Player 1' : 'Player 2';
+
+  // Mark egg used
+  eggs[index] = isRaw ? 'R_used' : null;
+
+  const log = document.getElementById('gameLog');
+
+  if (isRaw) {
+    rawCounts[currentPlayer]++;
+    const dotId = `p${currentPlayer+1}dot${rawCounts[currentPlayer]-1}`;
+    document.getElementById(dotId).classList.add('hit');
+    document.getElementById(`p${currentPlayer+1}raw`).textContent = rawCounts[currentPlayer];
+
+    addLog(`💥 ${pName} cracked a RAW egg! (${rawCounts[currentPlayer]}/2)`, 'raw');
+
+    if (rawCounts[currentPlayer] >= 2) {
+      // This player loses
+      gameOver = true;
+      const winner = currentPlayer === 0 ? 'Player 2' : 'Player 1';
+      const loserCard = currentPlayer === 0 ? 'p1card' : 'p2card';
+      const winnerCard = currentPlayer === 0 ? 'p2card' : 'p1card';
+      document.getElementById(loserCard).classList.add('loser');
+      document.getElementById(winnerCard).classList.add('winner');
+
+      const banner = document.getElementById('gameOverBanner');
+      banner.textContent = `🏆 ${winner} WINS!`;
+      banner.className = `game-over-banner show ${currentPlayer === 0 ? 'p2wins' : 'p1wins'}`;
+      document.getElementById('turnIndicator').textContent = '';
+      addLog(`🏆 ${winner} wins the game!`, 'win');
+      renderCarton();
+      return;
+    }
+  } else {
+    addLog(`✅ ${pName} is safe — hard-boiled!`, 'safe');
+  }
+
+  currentPlayer = 1 - currentPlayer;
+  const nextName = currentPlayer === 0 ? 'Player 1' : 'Player 2';
+  document.getElementById('turnIndicator').textContent = `${nextName}'s turn — pick an egg!`;
+  renderCarton();
+}
+
+function addLog(msg, cls) {
+  const log = document.getElementById('gameLog');
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${cls || ''}`;
+  entry.textContent = msg;
+  log.appendChild(entry);
+  log.scrollTop = log.scrollHeight;
+}
+
+function autoPlay() {
+  if (gameOver) resetGame();
+  const available = eggs.map((e,i) => e === 'H' || e === 'R' ? i : -1).filter(i => i >= 0);
+  if (available.length === 0) return;
+  const pick = available[Math.floor(Math.random() * available.length)];
+  pickEgg(pick);
+  if (!gameOver) setTimeout(autoPlay, 400);
+}
+
+// ---- SIMULATION ----
+function simulateGame() {
+  let arr = Array(8).fill('H').concat(Array(4).fill('R'));
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+
+  let raws = [0, 0];
+  let turn = 0;
+  let totalTurns = 0;
+
+  for (let i = 0; i < arr.length; i++) {
+    const player = turn % 2;
+    if (arr[i] === 'R') {
+      raws[player]++;
+      if (raws[player] >= 2) {
+        return { winner: 1 - player, turns: i + 1 };
+      }
+    }
+    turn++;
+    totalTurns++;
+  }
+  // Shouldn't reach here with 4 raw eggs
+  return { winner: -1, turns: totalTurns };
+}
+
+function runSimulation() {
+  const n = parseInt(document.getElementById('simCount').value);
+  document.getElementById('progressWrap').classList.add('show');
+
+  let p1wins = 0, p2wins = 0, totalTurns = 0;
+  const turnDist = {};
+
+  // Run in chunks to avoid blocking UI
+  let done = 0;
+  const chunk = 1000;
+
+  function runChunk() {
+    const end = Math.min(done + chunk, n);
+    for (let i = done; i < end; i++) {
+      const result = simulateGame();
+      if (result.winner === 0) p1wins++;
+      else if (result.winner === 1) p2wins++;
+      totalTurns += result.turns;
+      turnDist[result.turns] = (turnDist[result.turns] || 0) + 1;
+    }
+    done = end;
+    document.getElementById('progressFill').style.width = (done/n*100) + '%';
+
+    if (done < n) {
+      setTimeout(runChunk, 0);
+    } else {
+      showSimResults(n, p1wins, p2wins, totalTurns, turnDist);
+    }
+  }
+
+  runChunk();
+}
+
+function showSimResults(n, p1wins, p2wins, totalTurns, turnDist) {
+  document.getElementById('statSims').textContent = n.toLocaleString();
+  document.getElementById('statP1wins').textContent = p1wins.toLocaleString();
+  document.getElementById('statP2wins').textContent = p2wins.toLocaleString();
+  const p1pct = (p1wins/n*100).toFixed(1) + '%';
+  const p2pct = (p2wins/n*100).toFixed(1) + '%';
+  document.getElementById('statP1pct').textContent = p1pct;
+  document.getElementById('statP2pct').textContent = p2pct;
+  document.getElementById('statAvgTurns').textContent = (totalTurns/n).toFixed(1);
+
+  setTimeout(() => {
+    document.getElementById('barP1').style.width = (p1wins/n*100) + '%';
+    document.getElementById('barP1').textContent = p1pct;
+    document.getElementById('barP2').style.width = (p2wins/n*100) + '%';
+    document.getElementById('barP2').textContent = p2pct;
+  }, 100);
+
+  // Distribution chart
+  const chart = document.getElementById('distChart');
+  chart.innerHTML = '';
+  const maxVal = Math.max(...Object.values(turnDist));
+  const keys = Object.keys(turnDist).sort((a,b) => a-b);
+  keys.forEach(k => {
+    const pct = turnDist[k] / maxVal * 100;
+    const bar = document.createElement('div');
+    bar.style.cssText = `flex:1; background:var(--yolk); opacity:0.7; height:${pct}%; border-radius:2px 2px 0 0; position:relative; min-width:16px;`;
+    bar.title = `${k} turns: ${turnDist[k]} games`;
+    const label = document.createElement('div');
+    label.style.cssText = 'position:absolute; bottom:-20px; left:50%; transform:translateX(-50%); font-size:0.6rem; color:#9A8060; white-space:nowrap;';
+    label.textContent = k;
+    bar.appendChild(label);
+    chart.appendChild(bar);
+  });
+  chart.style.paddingBottom = '24px';
+
+  document.getElementById('progressWrap').classList.remove('show');
+}
+
+function switchMode(mode) {
+  document.querySelectorAll('.mode-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(`mode-${mode}`).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// Init
+resetGame();
+</script>
+</body>
+</html>
